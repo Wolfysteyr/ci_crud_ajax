@@ -8,6 +8,13 @@
   <title>CRUD App Using CI 4 and Ajax</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
 
+
+  <script src="/jsonform-2.2.5/deps/jquery.min.js"></script>
+  <script src="/jsonform-2.2.5/deps/underscore.js"></script>
+  <script src="/jsonform-2.2.5/deps/opt/jsv.js"></script>
+  <script src="/jsonform-2.2.5/lib/jsonform.js"></script>
+  
+
 </head>
 
 <body>
@@ -19,37 +26,7 @@
           <h5 class="modal-title" id="staticBackdropLabel">Add New Post</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <form action="#" method="POST" enctype="multipart/form-data" id="add_post_form" novalidate>
-          <div class="modal-body p-5">
-            <div class="mb-3">
-              <label>Post Title</label>
-              <input type="text" name="title" class="form-control" placeholder="Title" required>
-              <div class="invalid-feedback">Post title is required!</div>
-            </div>
-
-            <div class="mb-3">
-              <label>Post Category</label>
-              <input type="text" name="category" class="form-control" placeholder="Category" required>
-              <div class="invalid-feedback">Post category is required!</div>
-            </div>
-
-            <div class="mb-3">
-              <label>Post Body</label>
-              <textarea name="body" class="form-control" rows="4" placeholder="Body" required></textarea>
-              <div class="invalid-feedback">Post body is required!</div>
-            </div>
-
-            <div class="mb-3">
-              <label>Post Image</label>
-              <input type="file" name="file" id="image" class="form-control" required>
-              <div class="invalid-feedback">Post image is required!</div>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            <button type="submit" class="btn btn-primary" id="add_post_btn">Add Post</button>
-          </div>
-        </form>
+        <div id="add_post_form"></div> <!-- Placeholder for JSONForm -->
       </div>
     </div>
   </div>
@@ -142,50 +119,103 @@
       </div>
     </div>
   </div>
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
   <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script>
+  <script type="text/javascript">
     $(function() {
-      // add new post ajax request
-      $("#add_post_form").submit(function(e) {
-        e.preventDefault();
-        const formData = new FormData(this);
-        if (!this.checkValidity()) {
-          e.preventDefault();
-          $(this).addClass('was-validated');
-        } else {
-          $("#add_post_btn").text("Adding...");
-          $.ajax({
-            url: '<?= base_url('post/add') ?>',
-            method: 'post',
-            data: formData,
-            contentType: false,
-            cache: false,
-            processData: false,
-            dataType: 'json',
-            success: function(response) {
-              if (response.error) {
-                $("#image").addClass('is-invalid');
-                $("#image").next().text(response.message.image);
-              } else {
-                $("#add_post_modal").modal('hide');
-                $("#add_post_form")[0].reset();
-                $("#image").removeClass('is-invalid');
-                $("#image").next().text('');
-                $("#add_post_form").removeClass('was-validated');
-                Swal.fire(
-                  'Added',
-                  response.message,
-                  'success'
-                );
-                fetchAllPosts();
-              }
-              $("#add_post_btn").text("Add Post");
-            }
-          });
+      // Initialize JSONForm
+      $('#add_post_form').jsonForm({
+        schema: {
+          title: {
+            type: 'string',
+            title: 'Post Title',
+            required: true
+          },
+          category: {
+            type: 'string',
+            title: 'Post Category',
+            required: true
+          },
+          body: {
+            type: 'string',
+            title: 'Post Body',
+            required: true
+          },
+          image: {
+            type: 'string',
+            title: 'Post Image',
+            required: true
+          }
+        },
+        form: [
+          "title",
+          {
+            "key": "category",
+            "type": "text"
+          },
+          {
+            "key": "body",
+            "type": "textarea",
+            "placeholder": "Enter the body of the post here..."
+          },
+          {
+            "key": "image",
+            "type": "file",
+            "placeholder": "Choose an image file"
+          }
+        ],
+        onSubmit: function (errors, values) {
+          if (errors) {
+            alert('Validation errors: ' + errors.join(', '));
+          } else {
+            submitForm(values);
+          }
         }
       });
+
+      // Bind submit button to form submission
+      $('#add_post_btn').on('click', function() {
+        $('#add_post_form').submit();
+      });
+
+      // AJAX form submission
+      function submitForm(values) {
+        $("#add_post_btn").text("Adding...");
+        const formData = new FormData();
+        for (const key in values) {
+          if (values.hasOwnProperty(key)) {
+            formData.append(key, values[key]);
+          }
+        }
+
+        $.ajax({
+          url: '<?= base_url('post/add') ?>',
+          method: 'post',
+          data: formData,
+          contentType: false,
+          cache: false,
+          processData: false,
+          dataType: 'json',
+          success: function(response) {
+            if (response.error) {
+              $("#image").addClass('is-invalid');
+              $("#image").next().text(response.message.image);
+            } else {
+              $("#add_post_modal").modal('hide');
+              $("#add_post_form")[0].reset();
+              $("#image").removeClass('is-invalid');
+              $("#image").next().text('');
+              Swal.fire(
+                'Added',
+                response.message,
+                'success'
+              );
+              fetchAllPosts();
+            }
+            $("#add_post_btn").text("Add Post");
+          }
+        });
+      }
+    });
 
       // edit post ajax request
       $(document).delegate('.post_edit_btn', 'click', function(e) {
@@ -294,8 +324,7 @@
             $("#show_posts").html(response.message);
           }
         });
-      }
-    });
+      };
   </script>
 
 </body>
